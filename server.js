@@ -1,9 +1,12 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const cors = require('cors');
 
 const app = express();
 const prisma = new PrismaClient();
 
+app.use(cors());
+app.use(express.raw());//Notwendig sonst error
 app.use(express.json());
 
 // Get all users
@@ -12,7 +15,7 @@ app.get('/users', async (req, res) => {
   res.json(users);
 });
 
-// Middleware for Validierung
+// Middleware for validation
 const validateUserData = (req, res, next) => {
   const { name, email } = req.body;
   if (!name || !email) {
@@ -37,7 +40,6 @@ app.post('/users', validateUserData, async (req, res) => {
     res.status(500).json({ error: 'Ein Fehler ist aufgetreten' });
   }
 });
-
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
