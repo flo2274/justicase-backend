@@ -11,33 +11,39 @@ app.use(express.json());
 
 // Get all users
 app.get('/users', async (req, res) => {
-  const users = await prisma.user.findMany();
-  res.json(users);
+  try {
+    const users = await prisma.user.findMany();
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'An error occurred while fetching users' });
+  }
 });
 
 // Middleware for validation
 const validateUserData = (req, res, next) => {
-  const { name, email } = req.body;
-  if (!name || !email) {
-    return res.status(400).json({ error: 'Name and email are required' });
+  const { username, password, email } = req.body;
+  if (!username || !password || !email) {
+    return res.status(400).json({ error: 'Username, password, and email are required' });
   }
   next();
 };
 
 // Create user
 app.post('/users', validateUserData, async (req, res) => {
-  const { name, email } = req.body;
+  const { username, password, email } = req.body;
   try {
     const user = await prisma.user.create({
       data: {
-        name,
+        username,
+        password,
         email,
       },
     });
     res.json(user);
   } catch (error) {
-    console.error('Fehler beim Erstellen des Benutzers:', error);
-    res.status(500).json({ error: 'Ein Fehler ist aufgetreten' });
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'An error occurred while creating user' });
   }
 });
 
