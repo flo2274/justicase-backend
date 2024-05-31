@@ -6,20 +6,29 @@ const prisma = new PrismaClient();
 
 app.use(express.json());
 
-// Get users
+// Get all users
 app.get('/users', async (req, res) => {
   const users = await prisma.user.findMany();
   res.json(users);
 });
 
+// Middleware for Validierung
+const validateUserData = (req, res, next) => {
+  const { name, email } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required' });
+  }
+  next();
+};
+
 // Create user
-app.post('/users', async (req, res) => {
+app.post('/users', validateUserData, async (req, res) => {
   const { name, email } = req.body;
   try {
     const user = await prisma.user.create({
       data: {
-        name: name,
-        email: email,
+        name,
+        email,
       },
     });
     res.json(user);
@@ -28,6 +37,7 @@ app.post('/users', async (req, res) => {
     res.status(500).json({ error: 'Ein Fehler ist aufgetreten' });
   }
 });
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
