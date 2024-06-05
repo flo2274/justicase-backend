@@ -13,38 +13,34 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Entität für Benutzer
 model User {
-  id         Int        @id @default(autoincrement())
-  username   String     @unique
-  password   String
-  email      String     @unique
-  createdAt  DateTime   @default(now())
-  // Verknüpfung zu den Fällen, in denen der Benutzer eingetragen ist
-  cases      Case[]     @relation("CaseUser")
-  caseUsers  CaseUser[]
+    id          Int      @id @default(autoincrement())
+    username    String
+    email       String   @unique
+    password    String
+    createdAt   DateTime @default(now())
+    // Beziehung zu den Fällen
+    cases       UserCase[]
 }
 
-// Entität für den Fall (Case)
 model Case {
-  id            Int         @id @default(autoincrement())
-  name          String
-  companyType   String      // Unternehmensform
-  industry      String      // Branche
-  createdAt     DateTime    @default(now())
-  // Verknüpfung zu den Geschädigten (Benutzern)
-  victims       User[]      @relation("CaseUser")
-  caseUsers     CaseUser[]
+    id          Int      @id @default(autoincrement())
+    name        String
+    companyType String?
+    industry    String?
+    createdAt   DateTime @default(now())
+    // Beziehung zu den Nutzern
+    users       UserCase[]
 }
 
-// Verknüpfungstabelle für die Many-to-Many-Beziehung zwischen User und Case
-model CaseUser {
-  user       User     @relation(fields: [userId], references: [id])
-  userId     Int 
-  case       Case     @relation(fields: [caseId], references: [id])
-  caseId     Int
+model UserCase {
+    id          Int      @id @default(autoincrement())
+    case        Case     @relation(fields: [caseId], references: [id])
+    user        User     @relation(fields: [userId], references: [id])
+    caseId      Int
+    userId      Int
 
-  @@id([userId, caseId])
+    @@unique([caseId, userId])
 }
 
 
