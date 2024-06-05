@@ -1,6 +1,6 @@
 # justicase-backend
 
-//Start server with node server.js
+//Start server with npm run dev
 
 //.env needs to be added maunally
 

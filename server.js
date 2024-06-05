@@ -54,20 +54,8 @@ app.post('/register', validateUserData, asyncHandler(async (req, res) => {
 
 
 app.post('/login', asyncHandler(async (req, res) => {
-  const { email, username, password } = req.body;
-
-  // Überprüfen, ob entweder eine E-Mail-Adresse oder ein Benutzername vorhanden ist
-  if (!(email || username) || !password) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  let user;
-  if (email) {
-    user = await prisma.user.findUnique({ where: { email } });
-  } else {
-    user = await prisma.user.findUnique({ where: { username } });
-  }
-
+  const { email, password } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }
