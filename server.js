@@ -13,13 +13,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 
+
 const asyncHandler = (handler) => (req, res, next) =>
   Promise.resolve(handler(req, res, next)).catch(next);
+
 
 const errorHandler = (err, req, res, next) => {
   console.error("Error:", err);
   res.status(500).json({ error: "Internal Server Error" });
 };
+
 
 const validateUserData = (req, res, next) => {
   const { username, password, email } = req.body;
@@ -31,6 +34,7 @@ const validateUserData = (req, res, next) => {
   next();
 };
 
+
 const generateToken = (user) => {
   return jwt.sign(
     { id: user.id, email: user.email },
@@ -39,6 +43,7 @@ const generateToken = (user) => {
   );
 };
 
+<<<<<<< HEAD
 app.post(
   "/register",
   validateUserData,
@@ -73,6 +78,39 @@ app.post(
     res.status(200).json({ message: "Login successful", user, token });
   })
 );
+=======
+
+app.post('/register', validateUserData, asyncHandler(async (req, res) => {
+  const { username, password, email } = req.body;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const newUser = await prisma.user.create({
+    data: {
+      username,
+      password: hashedPassword,
+      email,
+    },
+  });
+  const token = generateToken(newUser);
+  res.status(201).json({ user: newUser, token });
+}));
+
+
+app.post('/login', asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    return res.status(401).json({ error: 'Invalid credentials' });
+  }
+
+  const token = generateToken(user);
+  res.status(200).json({ message: 'Login successful', user, token });
+}));
+>>>>>>> 47e96184d06124bf17751f5ad958adc642bf4ff3
 
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -95,6 +133,7 @@ app.get("/users", authenticateJWT, async (req, res) => {
   res.json(users);
 });
 
+<<<<<<< HEAD
 app.post(
   "/cases",
   authenticateJWT,
@@ -117,11 +156,23 @@ app.post(
     }
 
     // Create the case and connect the victim
+=======
+
+app.post('/cases', authenticateJWT, asyncHandler(async (req, res) => {
+  const { name, companyType, industry } = req.body;
+
+  if (!name || !companyType || !industry) {
+    return res.status(400).json({ error: 'Name, companyType, and industry are required' });
+  }
+
+  try {
+>>>>>>> 47e96184d06124bf17751f5ad958adc642bf4ff3
     const newCase = await prisma.case.create({
       data: {
         name,
         companyType,
         industry,
+<<<<<<< HEAD
         victims: {
           connect: { id: victimUser.id },
         },
@@ -144,6 +195,18 @@ app.get(
     res.json(cases);
   })
 );
+=======
+      },
+    });
+
+    res.status(201).json({ case: newCase });
+  } catch (error) {
+    console.error('Error creating new case:', error);
+    res.status(500).json({ error: 'Failed to create new case' });
+  }
+}));
+
+>>>>>>> 47e96184d06124bf17751f5ad958adc642bf4ff3
 
 app.use(errorHandler);
 

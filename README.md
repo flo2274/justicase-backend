@@ -1,8 +1,8 @@
 # justicase-backend
 
-//Start server with node server.js
+//Start server with npm run dev
 
 //.env needs to be added maunally
 
 / Update des Datenbankschemas durch Migration.
-// npx prisma migrate dev --name add_teams_and_players
+// npx prisma migrate dev
