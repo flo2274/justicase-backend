@@ -141,6 +141,29 @@ app.get(
   })
 );
 
+app.get("/getmycases", authenticateJWT, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const cases = await prisma.case.findMany({
+      where: {
+        victims: {
+          some: {
+            userId: {
+              equals: userId,
+            },
+          },
+        },
+      },
+    });
+
+    res.json(cases);
+  } catch (error) {
+    console.error("Error fetching cases:", error);
+    res.status(500).json({ error: "Failed to fetch cases" });
+  }
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
