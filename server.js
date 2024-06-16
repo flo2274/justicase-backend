@@ -151,6 +151,26 @@ app.get("/getmycases", authenticateJWT, async (req, res) => {
   }
 });
 
+app.get("/getusersbycase/:caseId", authenticateJWT, async (req, res) => {
+  try {
+    const caseId = parseInt(req.params.caseId);
+
+    const userCases = await prisma.userCase.findMany({
+      where: { caseId: caseId },
+      include: {
+        user: true,
+      },
+    });
+
+    const users = userCases.map((userCase) => userCase.user);
+
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users by case:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;

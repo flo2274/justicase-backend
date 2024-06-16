@@ -8,3 +8,6 @@
 // npx prisma migrate dev
 
 make validator
+
+flutter:
+fetch more often bsp after case creation
