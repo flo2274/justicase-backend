@@ -99,28 +99,22 @@ app.post(
   "/cases",
   authenticateJWT,
   asyncHandler(async (req, res) => {
-    const { name, companyType, industry, victim } = req.body;
-
-    if (!victim) {
-      return res.status(400).json({ error: "Victim username is required" });
-    }
-
-    const victimUser = await prisma.user.findUnique({
-      where: { username: victim },
-    });
-
-    if (!victimUser) {
-      return res.status(404).json({ error: "Victim username does not exist" });
-    }
+    const { name, companyType, industry } = req.body;
+    const userId = req.user.id;
 
     const newCase = await prisma.case.create({
       data: {
         name,
         companyType,
         industry,
-        victims: {
-          connect: { id: victimUser.id },
-        },
+      },
+    });
+
+    // Create an entry in the UserCase table
+    await prisma.userCase.create({
+      data: {
+        userId: userId,
+        caseId: newCase.id,
       },
     });
 
@@ -132,11 +126,7 @@ app.get(
   "/cases",
   authenticateJWT,
   asyncHandler(async (req, res) => {
-    const cases = await prisma.case.findMany({
-      include: {
-        victims: true,
-      },
-    });
+    const cases = await prisma.case.findMany({});
     res.json(cases);
   })
 );
@@ -145,17 +135,14 @@ app.get("/getmycases", authenticateJWT, async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const cases = await prisma.case.findMany({
-      where: {
-        victims: {
-          some: {
-            userId: {
-              equals: userId,
-            },
-          },
-        },
+    const userCases = await prisma.userCase.findMany({
+      where: { userId: userId },
+      include: {
+        case: true,
       },
     });
+
+    const cases = userCases.map((userCase) => userCase.case);
 
     res.json(cases);
   } catch (error) {

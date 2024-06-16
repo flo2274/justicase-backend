@@ -25,7 +25,7 @@ model User {
 
 model Case {
     id          Int      @id @default(autoincrement())
-    name        String
+    name        String   @unique
     companyType String?
     industry    String?
     createdAt   DateTime @default(now())

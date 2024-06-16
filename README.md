@@ -6,3 +6,5 @@
 
 / Update des Datenbankschemas durch Migration.
 // npx prisma migrate dev
+
+make validator
