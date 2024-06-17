@@ -171,6 +171,75 @@ app.get("/getusersbycase/:caseId", authenticateJWT, async (req, res) => {
   }
 });
 
+app.post(
+  "/enrolltocase",
+  authenticateJWT,
+  asyncHandler(async (req, res) => {
+    const { caseId } = req.body;
+    const userId = req.user.id;
+
+    // Check if the case exists
+    const existingCase = await prisma.case.findUnique({
+      where: { id: caseId },
+    });
+    if (!existingCase) {
+      return res.status(404).json({ error: "Case not found" });
+    }
+
+    // Check if the user is already enrolled in the case
+    const userCase = await prisma.userCase.findFirst({
+      where: {
+        userId: userId,
+        caseId: caseId,
+      },
+    });
+    if (userCase) {
+      return res
+        .status(400)
+        .json({ error: "User already enrolled in this case" });
+    }
+
+    // Enroll the user into the case
+    await prisma.userCase.create({
+      data: {
+        userId: userId,
+        caseId: caseId,
+      },
+    });
+
+    res.status(201).json({ message: "Enrollment successful" });
+  })
+);
+
+app.post(
+  "/removefromcase",
+  authenticateJWT,
+  asyncHandler(async (req, res) => {
+    const { caseId } = req.body;
+    const userId = req.user.id;
+
+    const userCase = await prisma.userCase.findFirst({
+      where: {
+        userId: userId,
+        caseId: caseId,
+      },
+    });
+    if (!userCase) {
+      return res
+        .status(400)
+        .json({ error: "User is not enrolled in this case" });
+    }
+
+    await prisma.userCase.delete({
+      where: {
+        id: userCase.id,
+      },
+    });
+
+    res.status(200).json({ message: "User removed from case successfully" });
+  })
+);
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
