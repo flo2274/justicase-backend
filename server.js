@@ -104,9 +104,10 @@ app.post("/login", async (req, res) => {
     const token = generateToken(user);
 
     // Return token and user details
-    res
-      .status(200)
-      .json({ token, user: { username: user.username, role: user.role } });
+    res.status(200).json({
+      token,
+      user: { id: user.id, username: user.username, role: user.role },
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -187,20 +188,36 @@ app.get(
   })
 );
 
-app.get("/getmycases", authenticateJWT, async (req, res) => {
+app.get("/getcasesbyuser", authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const { role, userId } = req.user; // Extract role and userId from JWT payload
 
-    const userCases = await prisma.userCase.findMany({
-      where: { userId: userId },
-      include: {
-        case: true,
-      },
-    });
+    if (role === "admin") {
+      // Admin request
+      const { userId: requestedUserId } = req.query; // Extract userId from query params
+      if (!requestedUserId) {
+        return res
+          .status(400)
+          .json({ error: "Admin request requires userId parameter" });
+      }
 
-    const cases = userCases.map((userCase) => userCase.case);
+      const userCases = await prisma.userCase.findMany({
+        where: { userId: parseInt(requestedUserId) }, // Ensure userId is parsed as an integer
+        include: { case: true },
+      });
 
-    res.json(cases);
+      const cases = userCases.map((userCase) => userCase.case);
+      res.json(cases);
+    } else {
+      // Normal user request
+      const userCases = await prisma.userCase.findMany({
+        where: { userId: userId },
+        include: { case: true },
+      });
+
+      const cases = userCases.map((userCase) => userCase.case);
+      res.json(cases);
+    }
   } catch (error) {
     console.error("Error fetching user's cases:", error);
     res.status(500).json({ error: "Failed to fetch cases" });
@@ -338,6 +355,41 @@ app.post(
     } catch (error) {
       console.error("Error removing from case:", error);
       res.status(500).json({ error: "Failed to remove user from case" });
+    }
+  })
+);
+
+app.delete(
+  "/deleteuser/:userId",
+  authenticateJWT,
+  asyncHandler(async (req, res) => {
+    const userIdToDelete = parseInt(req.params.userId);
+    const requesterUserId = req.user.userId;
+    const requesterRole = req.user.role;
+
+    try {
+      // Check if the requester is an admin or the owner of the user being deleted
+      if (requesterRole !== "admin" && userIdToDelete !== requesterUserId) {
+        return res.status(403).json({ error: "Unauthorized to delete user" });
+      }
+
+      // Check if the user exists
+      const existingUser = await prisma.user.findUnique({
+        where: { id: userIdToDelete },
+      });
+      if (!existingUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Delete the user
+      await prisma.user.delete({
+        where: { id: userIdToDelete },
+      });
+
+      res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: "Failed to delete user" });
     }
   })
 );
