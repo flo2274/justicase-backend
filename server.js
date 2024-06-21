@@ -21,58 +21,91 @@ const errorHandler = (err, req, res, next) => {
   res.status(500).json({ error: "Internal Server Error" });
 };
 
-const validateUserData = (req, res, next) => {
-  const { username, password, email } = req.body;
-  if (!username || !password || !email) {
+app.post("/register", async (req, res) => {
+  const { firstName, lastName, username, email, password } = req.body;
+
+  // Custom validation
+  if (!firstName || !lastName || !username || !email || !password) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
+
+  if (!/\S+@\S+\.\S+/.test(email)) {
+    return res.status(400).json({ error: "Invalid email format" });
+  }
+
+  if (password.length < 6) {
     return res
       .status(400)
-      .json({ error: "Username, password, and email are required" });
+      .json({ error: "Password must be at least 6 characters long" });
   }
-  next();
-};
+
+  try {
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: "Email is already registered" });
+    }
+
+    const existingUsername = await prisma.user.findUnique({
+      where: { username },
+    });
+    if (existingUsername) {
+      return res.status(400).json({ error: "Username already in use" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        firstName,
+        lastName,
+        username,
+        email,
+        password: hashedPassword,
+        role: "user",
+      },
+    });
+
+    res.status(201).json({ message: "Registration successful" });
+  } catch (error) {
+    console.error("Error registering user:", error);
+    res.status(500).json({ error: "Failed to register user" });
+  }
+});
 
 const generateToken = (user) => {
   return jwt.sign(
-    { id: user.id, email: user.email },
+    { userId: user.id, email: user.email, role: user.role },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "1h" }
   );
 };
 
-app.post(
-  "/register",
-  validateUserData,
-  asyncHandler(async (req, res) => {
-    const { username, password, email } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await prisma.user.create({
-      data: {
-        username,
-        password: hashedPassword,
-        email,
-      },
-    });
-    const token = generateToken(newUser);
-    res.status(201).json({ user: newUser, token });
-  })
-);
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-app.post(
-  "/login",
-  asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid email" });
     }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
+
     const token = generateToken(user);
-    res.status(200).json({ message: "Login successful", user, token });
-  })
-);
+
+    // Return token and user details
+    res
+      .status(200)
+      .json({ token, user: { username: user.username, role: user.role } });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 const authenticateJWT = (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -91,8 +124,13 @@ const authenticateJWT = (req, res, next) => {
 };
 
 app.get("/users", authenticateJWT, async (req, res) => {
-  const users = await prisma.user.findMany();
-  res.json(users);
+  try {
+    const users = await prisma.user.findMany();
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ error: "Failed to fetch users" });
+  }
 });
 
 app.post(
@@ -100,25 +138,33 @@ app.post(
   authenticateJWT,
   asyncHandler(async (req, res) => {
     const { name, companyType, industry } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
-    const newCase = await prisma.case.create({
-      data: {
-        name,
-        companyType,
-        industry,
-      },
-    });
+    try {
+      const result = await prisma.$transaction(async (prisma) => {
+        const newCase = await prisma.case.create({
+          data: {
+            name,
+            companyType,
+            industry,
+          },
+        });
 
-    // Create an entry in the UserCase table
-    await prisma.userCase.create({
-      data: {
-        userId: userId,
-        caseId: newCase.id,
-      },
-    });
+        await prisma.userCase.create({
+          data: {
+            userId: userId,
+            caseId: newCase.id,
+          },
+        });
 
-    res.status(201).json(newCase);
+        return newCase;
+      });
+
+      res.status(201).json(result);
+    } catch (error) {
+      console.error("Error creating case:", error);
+      res.status(500).json({ error: "Failed to create case" });
+    }
   })
 );
 
@@ -126,14 +172,19 @@ app.get(
   "/cases",
   authenticateJWT,
   asyncHandler(async (req, res) => {
-    const cases = await prisma.case.findMany({});
-    res.json(cases);
+    try {
+      const cases = await prisma.case.findMany({});
+      res.json(cases);
+    } catch (error) {
+      console.error("Error fetching cases:", error);
+      res.status(500).json({ error: "Failed to fetch cases" });
+    }
   })
 );
 
 app.get("/getmycases", authenticateJWT, async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     const userCases = await prisma.userCase.findMany({
       where: { userId: userId },
@@ -146,7 +197,7 @@ app.get("/getmycases", authenticateJWT, async (req, res) => {
 
     res.json(cases);
   } catch (error) {
-    console.error("Error fetching cases:", error);
+    console.error("Error fetching user's cases:", error);
     res.status(500).json({ error: "Failed to fetch cases" });
   }
 });
@@ -176,38 +227,43 @@ app.post(
   authenticateJWT,
   asyncHandler(async (req, res) => {
     const { caseId } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
-    // Check if the case exists
-    const existingCase = await prisma.case.findUnique({
-      where: { id: caseId },
-    });
-    if (!existingCase) {
-      return res.status(404).json({ error: "Case not found" });
+    try {
+      // Check if the case exists
+      const existingCase = await prisma.case.findUnique({
+        where: { id: caseId },
+      });
+      if (!existingCase) {
+        return res.status(404).json({ error: "Case not found" });
+      }
+
+      // Check if the user is already enrolled in the case
+      const userCase = await prisma.userCase.findFirst({
+        where: {
+          userId: userId,
+          caseId: caseId,
+        },
+      });
+      if (userCase) {
+        return res
+          .status(400)
+          .json({ error: "User already enrolled in this case" });
+      }
+
+      // Enroll user into the case
+      await prisma.userCase.create({
+        data: {
+          userId: userId,
+          caseId: caseId,
+        },
+      });
+
+      res.status(201).json({ message: "Enrollment successful" });
+    } catch (error) {
+      console.error("Error enrolling to case:", error);
+      res.status(500).json({ error: "Failed to enroll into case" });
     }
-
-    // Check if the user is already enrolled in the case
-    const userCase = await prisma.userCase.findFirst({
-      where: {
-        userId: userId,
-        caseId: caseId,
-      },
-    });
-    if (userCase) {
-      return res
-        .status(400)
-        .json({ error: "User already enrolled in this case" });
-    }
-
-    // Enroll the user into the case
-    await prisma.userCase.create({
-      data: {
-        userId: userId,
-        caseId: caseId,
-      },
-    });
-
-    res.status(201).json({ message: "Enrollment successful" });
   })
 );
 
@@ -216,27 +272,32 @@ app.post(
   authenticateJWT,
   asyncHandler(async (req, res) => {
     const { caseId } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
-    const userCase = await prisma.userCase.findFirst({
-      where: {
-        userId: userId,
-        caseId: caseId,
-      },
-    });
-    if (!userCase) {
-      return res
-        .status(400)
-        .json({ error: "User is not enrolled in this case" });
+    try {
+      const userCase = await prisma.userCase.findFirst({
+        where: {
+          userId: userId,
+          caseId: caseId,
+        },
+      });
+      if (!userCase) {
+        return res
+          .status(400)
+          .json({ error: "User is not enrolled in this case" });
+      }
+
+      await prisma.userCase.delete({
+        where: {
+          id: userCase.id,
+        },
+      });
+
+      res.status(200).json({ message: "User removed from case successfully" });
+    } catch (error) {
+      console.error("Error removing from case:", error);
+      res.status(500).json({ error: "Failed to remove user from case" });
     }
-
-    await prisma.userCase.delete({
-      where: {
-        id: userCase.id,
-      },
-    });
-
-    res.status(200).json({ message: "User removed from case successfully" });
   })
 );
 
