@@ -52,6 +52,11 @@ app.post("/register", async (req, res) => {
       return res.status(400).json({ error: "Username already in use" });
     }
 
+    let role = "user";
+    if (username === "admin") {
+      role = "admin";
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: {
@@ -60,7 +65,7 @@ app.post("/register", async (req, res) => {
         username,
         email,
         password: hashedPassword,
-        role: "user",
+        role, // Assigning the determined role
       },
     });
 
@@ -223,11 +228,12 @@ app.get("/getusersbycase/:caseId", authenticateJWT, async (req, res) => {
 });
 
 app.post(
-  "/enrolltocase",
+  "/addusertocase",
   authenticateJWT,
   asyncHandler(async (req, res) => {
-    const { caseId } = req.body;
-    const userId = req.user.userId;
+    const { caseId, userId } = req.body;
+    const requesterUserId = req.user.userId;
+    const requesterRole = req.user.role;
 
     try {
       // Check if the case exists
@@ -236,6 +242,18 @@ app.post(
       });
       if (!existingCase) {
         return res.status(404).json({ error: "Case not found" });
+      }
+
+      if (requesterRole === "admin") {
+        // Admin logic: require userId in request body
+        if (!userId) {
+          return res
+            .status(400)
+            .json({ error: "userId is required for admin" });
+        }
+      } else {
+        // Non-admin logic: use requesterUserId as userId
+        userId = requesterUserId;
       }
 
       // Check if the user is already enrolled in the case
@@ -268,13 +286,35 @@ app.post(
 );
 
 app.post(
-  "/removefromcase",
+  "/removeuserfromcase",
   authenticateJWT,
   asyncHandler(async (req, res) => {
-    const { caseId } = req.body;
-    const userId = req.user.userId;
+    const { caseId, userId } = req.body;
+    const requesterUserId = req.user.userId;
+    const requesterRole = req.user.role;
 
     try {
+      // Check if the case exists
+      const existingCase = await prisma.case.findUnique({
+        where: { id: caseId },
+      });
+      if (!existingCase) {
+        return res.status(404).json({ error: "Case not found" });
+      }
+
+      if (requesterRole === "admin") {
+        // Admin logic: require userId in request body
+        if (!userId) {
+          return res
+            .status(400)
+            .json({ error: "userId is required for admin" });
+        }
+      } else {
+        // Non-admin logic: use requesterUserId as userId
+        userId = requesterUserId;
+      }
+
+      // Check if the user is enrolled in the case
       const userCase = await prisma.userCase.findFirst({
         where: {
           userId: userId,
@@ -287,6 +327,7 @@ app.post(
           .json({ error: "User is not enrolled in this case" });
       }
 
+      // Remove user from the case
       await prisma.userCase.delete({
         where: {
           id: userCase.id,
