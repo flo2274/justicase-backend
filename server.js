@@ -248,7 +248,7 @@ app.post(
   "/addusertocase",
   authenticateJWT,
   asyncHandler(async (req, res) => {
-    const { caseId, userId } = req.body;
+    let { caseId, userId } = req.body; // Verwende let statt const, um userId später zu ändern
     const requesterUserId = req.user.userId;
     const requesterRole = req.user.role;
 
@@ -270,7 +270,7 @@ app.post(
         }
       } else {
         // Non-admin logic: use requesterUserId as userId
-        userId = requesterUserId;
+        userId = requesterUserId; // Hier wird userId zugewiesen, deshalb sollte es let sein
       }
 
       // Check if the user is already enrolled in the case
@@ -306,7 +306,7 @@ app.post(
   "/removeuserfromcase",
   authenticateJWT,
   asyncHandler(async (req, res) => {
-    const { caseId, userId } = req.body;
+    let { caseId, userId } = req.body;
     const requesterUserId = req.user.userId;
     const requesterRole = req.user.role;
 
