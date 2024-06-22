@@ -376,10 +376,16 @@ app.delete(
       // Check if the user exists
       const existingUser = await prisma.user.findUnique({
         where: { id: userIdToDelete },
+        include: { cases: true }, // Include cases related to this user
       });
       if (!existingUser) {
         return res.status(404).json({ error: "User not found" });
       }
+
+      // Delete associated records in UserCase table
+      await prisma.userCase.deleteMany({
+        where: { userId: userIdToDelete },
+      });
 
       // Delete the user
       await prisma.user.delete({
