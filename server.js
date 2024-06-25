@@ -400,6 +400,36 @@ app.delete(
   })
 );
 
+app.delete("/deletecase/:caseId", async (req, res) => {
+  const caseId = parseInt(req.params.caseId);
+
+  try {
+    // Check if the case exists
+    const existingCase = await prisma.case.findUnique({
+      where: { id: caseId },
+      include: { users: true }, // Include users related to this case
+    });
+    if (!existingCase) {
+      return res.status(404).json({ error: "Case not found" });
+    }
+
+    // Delete associated records in UserCase table
+    await prisma.userCase.deleteMany({
+      where: { caseId: caseId },
+    });
+
+    // Delete the case
+    await prisma.case.delete({
+      where: { id: caseId },
+    });
+
+    res.status(200).json({ message: "Case deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting case:", error);
+    res.status(500).json({ error: "Failed to delete case" });
+  }
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
