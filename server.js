@@ -430,6 +430,30 @@ app.delete("/deletecase/:caseId", async (req, res) => {
   }
 });
 
+app.get("/getenrolleduserscount/:caseId", authenticateJWT, async (req, res) => {
+  try {
+    const caseId = parseInt(req.params.caseId);
+
+    // Überprüfen, ob der Fall existiert
+    const existingCase = await prisma.case.findUnique({
+      where: { id: caseId },
+    });
+    if (!existingCase) {
+      return res.status(404).json({ error: "Case not found" });
+    }
+
+    // Zähle die eingetragenen Benutzer für den Fall
+    const count = await prisma.userCase.count({
+      where: { caseId: caseId },
+    });
+
+    res.json({ count });
+  } catch (error) {
+    console.error("Error fetching enrolled users count:", error);
+    res.status(500).json({ error: "Failed to fetch enrolled users count" });
+  }
+});
+
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
