@@ -195,14 +195,10 @@ app.get("/getcasesbyuser", authenticateJWT, async (req, res) => {
     if (role === "admin") {
       // Admin request
       const { userId: requestedUserId } = req.query; // Extract userId from query params
-      if (!requestedUserId) {
-        return res
-          .status(400)
-          .json({ error: "Admin request requires userId parameter" });
-      }
+      const targetUserId = requestedUserId ? parseInt(requestedUserId) : userId; // Use requester userId if no userId is provided in query
 
       const userCases = await prisma.userCase.findMany({
-        where: { userId: parseInt(requestedUserId) }, // Ensure userId is parsed as an integer
+        where: { userId: targetUserId },
         include: { case: true },
       });
 
