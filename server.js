@@ -220,6 +220,24 @@ app.get("/getcasesbyuser", authenticateJWT, async (req, res) => {
   }
 });
 
+app.get("/casesbyindustry/:industry", async (req, res) => {
+  const { industry } = req.params;
+
+  try {
+    // Query cases based on category
+    const cases = await prisma.case.findMany({
+      where: {
+        industry: industry.toLowerCase(),
+      },
+    });
+
+    res.json(cases);
+  } catch (error) {
+    console.error("Error fetching cases by industrie:", error);
+    res.status(500).json({ error: "Failed to fetch cases by industrie" });
+  }
+});
+
 app.get("/getusersbycase/:caseId", authenticateJWT, async (req, res) => {
   try {
     const caseId = parseInt(req.params.caseId);
