@@ -23,6 +23,7 @@ model User {
   role        String
   createdAt   DateTime   @default(now())
   cases       UserCase[]
+  messages    Message[]
 }
 
 
@@ -33,9 +34,11 @@ model Case {
     industry    String?
     createdAt   DateTime @default(now())
     users       UserCase[]
+    messages    Message[]
 }
 
 model UserCase {
+
     id          Int      @id @default(autoincrement())
 
     case        Case     @relation(fields: [caseId], references: [id])
@@ -45,5 +48,18 @@ model UserCase {
 
     @@unique([caseId, userId])
 }
+
+model Message {
+    id        Int      @id @default(autoincrement())
+    text      String
+    createdAt DateTime @default(now())
+
+    user      User     @relation(fields: [userId], references: [id])
+    userId    Int
+
+    case      Case     @relation(fields: [caseId], references: [id])
+    caseId    Int
+}
+
 
 
