@@ -279,4 +279,89 @@ exports.getCasesWithMostEnrolledUsers = async (req, res) => {
   }
 };
 
+exports.sendMessageToCase = async (req, res) => {
+  const { caseId } = req.params;
+  const { text } = req.body;
+
+  // Überprüfung der Eingabewerte
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'Invalid message text' });
+  }
+
+  try {
+    const userId = req.user.userId;
+
+    // Überprüfen, ob der Benutzer existiert
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Erstellen der neuen Nachricht
+    const newMessage = await prisma.message.create({
+      data: {
+        text,
+        userId: userId,
+        caseId: parseInt(caseId),
+      },
+    });
+
+    res.status(201).json(newMessage);
+  } catch (error) {
+    console.error('Error sending message:', error);
+    res.status(500).json({ error: 'Failed to send message' });
+  }
+};
+
+
+exports.getAllMessagesForCase = async (req, res) => {
+  const { caseId } = req.params;
+
+  try {
+    // Convert caseId to integer
+    const parsedCaseId = parseInt(caseId);
+
+    // Fetch messages for the given caseId including related user data
+    const messages = await prisma.message.findMany({
+      where: {
+        caseId: parsedCaseId,
+      },
+      include: {
+        user: true,
+        case: true,
+      },
+    });
+
+    // Modify each message object to include the username of the sender
+    const modifiedMessages = messages.map(async message => {
+      const { userId, ...rest } = message;
+      const user = await prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        select: {
+          username: true,
+        },
+      });
+      return {
+        ...rest,
+        userId: userId,
+        username: user.username,
+      };
+    });
+
+    // Resolve all promises in modifiedMessages array
+    const resolvedModifiedMessages = await Promise.all(modifiedMessages);
+
+    res.status(200).json(resolvedModifiedMessages);
+  } catch (error) {
+    console.error('Error fetching messages for case:', error);
+    res.status(500).json({ error: 'Failed to fetch messages for case' });
+  }
+};
+
+
 module.exports = exports;
