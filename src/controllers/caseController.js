@@ -1,8 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-// Funktionen für die Routen-Handler
-
 // Erstellt einen neuen Fall
 exports.createCase = async (req, res) => {
   const { name, companyType, industry } = req.body;
@@ -95,6 +93,7 @@ exports.getCasesByIndustry = async (req, res) => {
   }
 };
 
+// Fügt einen Benutzer zu einem Fall hinzu
 exports.addUserToCase = async (req, res) => {
   const { caseId } = req.params;
   let { userId } = req.body;
@@ -148,6 +147,7 @@ exports.addUserToCase = async (req, res) => {
   }
 };
 
+// Entfernt einen Benutzer aus einem Fall
 exports.removeUserFromCase = async (req, res) => {
   const { caseId } = req.params;
   let { userId } = req.query; // userId als Query-Parameter
@@ -155,7 +155,7 @@ exports.removeUserFromCase = async (req, res) => {
   const requesterRole = req.user.role;
 
   try {
-    // Check if the case exists
+    // Überprüfen, ob der Fall existiert
     const existingCase = await prisma.case.findUnique({
       where: { id: parseInt(caseId) },
     });
@@ -164,16 +164,16 @@ exports.removeUserFromCase = async (req, res) => {
     }
 
     if (requesterRole === "admin") {
-      // Admin logic: require userId in request query
+      // Admin-Logik: userId im Query-Parameter erforderlich
       if (!userId) {
         return res.status(400).json({ error: "userId is required for admin" });
       }
     } else {
-      // Non-admin logic: use requesterUserId as userId
+      // Nicht-Admin-Logik: Verwenden von requesterUserId als userId
       userId = requesterUserId.toString();
     }
 
-    // Check if the user is enrolled in the case
+    // Überprüfen, ob der Benutzer im Fall eingeschrieben ist
     const userToRemove = await prisma.userCase.findFirst({
       where: {
         userId: parseInt(userId), // Konvertiere userId zu einer Zahl
@@ -184,7 +184,7 @@ exports.removeUserFromCase = async (req, res) => {
       return res.status(400).json({ error: "User is not enrolled in this case" });
     }
 
-    // Remove user from the case
+    // Benutzer aus dem Fall entfernen
     await prisma.userCase.delete({
       where: {
         id: userToRemove.id,
@@ -193,14 +193,12 @@ exports.removeUserFromCase = async (req, res) => {
 
     res.status(200).json({ message: "User removed from case successfully" });
   } catch (error) {
-    console.error("Error removing from case:", error);
+    console.error("Error removing user from case:", error);
     res.status(500).json({ error: "Failed to remove user from case" });
   }
 };
 
-
-
-
+// Löscht einen Fall
 exports.deleteCase = async (req, res) => {
   const caseId = parseInt(req.params.caseId);
   const requesterRole = req.user.role;
@@ -236,8 +234,6 @@ exports.deleteCase = async (req, res) => {
   }
 };
 
-
-
 // Zählt die eingetragenen Benutzer für einen Fall
 exports.getEnrolledUsersCount = async (req, res) => {
   try {
@@ -263,3 +259,24 @@ exports.getEnrolledUsersCount = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch enrolled users count" });
   }
 };
+
+// Holt Fälle mit den meisten eingeschriebenen Benutzern
+exports.getCasesWithMostEnrolledUsers = async (req, res) => {
+  try {
+    const cases = await prisma.case.findMany({
+      include: {
+        users: true,
+      },
+    });
+
+    // Sortiere die Fälle nach der Anzahl der eingetragenen Benutzer in absteigender Reihenfolge
+    cases.sort((a, b) => b.users.length - a.users.length);
+
+    res.json(cases.slice(0, 4)); // Nimm die Top 4 Fälle mit den meisten eingetragenen Benutzern
+  } catch (error) {
+    console.error("Error fetching cases with most enrolled users:", error);
+    res.status(500).json({ error: "Failed to fetch cases with most enrolled users" });
+  }
+};
+
+module.exports = exports;

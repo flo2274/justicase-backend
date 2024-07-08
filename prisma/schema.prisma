@@ -1,65 +1,68 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// Define your datasource for MySQL
 datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
+// Define your generator for Prisma Client
 generator client {
   provider = "prisma-client-js"
 }
 
+// Define your User model
 model User {
-  id          Int        @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   firstName   String
   lastName    String
-  username    String     @unique
-  email       String     @unique
+  username    String    @unique
+  email       String    @unique
   password    String
   role        String
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime  @default(now())
   cases       UserCase[]
+
+  // Define the messages relation
   messages    Message[]
 }
 
-
+// Define your Case model
 model Case {
-    id          Int      @id @default(autoincrement())
-    name        String   @unique
-    companyType String?
-    industry    String?
-    createdAt   DateTime @default(now())
-    users       UserCase[]
-    messages    Message[]
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  companyType String?
+  industry    String?
+  createdAt   DateTime  @default(now())
+  users       UserCase[]
+
+  // Define the messages relation
+  messages    Message[]
 }
 
+// Define your UserCase model
 model UserCase {
+  id          Int     @id @default(autoincrement())
+  case        Case    @relation(fields: [caseId], references: [id])
+  user        User    @relation(fields: [userId], references: [id])
+  caseId      Int
+  userId      Int
 
-    id          Int      @id @default(autoincrement())
-
-    case        Case     @relation(fields: [caseId], references: [id])
-    user        User     @relation(fields: [userId], references: [id])
-    caseId      Int
-    userId      Int
-
-    @@unique([caseId, userId])
+  @@unique([caseId, userId])
 }
 
+// Define your Message model
 model Message {
-    id        Int      @id @default(autoincrement())
-    text      String
-    createdAt DateTime @default(now())
+  id        Int       @id @default(autoincrement())
+  text      String
+  createdAt DateTime  @default(now())
 
-    user      User     @relation(fields: [userId], references: [id])
-    userId    Int
+  // Define the user relation
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
 
-    case      Case     @relation(fields: [caseId], references: [id])
-    caseId    Int
+  // Define the case relation
+  case      Case      @relation(fields: [caseId], references: [id])
+  caseId    Int
 }
-
-
-
