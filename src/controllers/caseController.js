@@ -129,7 +129,9 @@ exports.addUserToCase = async (req, res) => {
       },
     });
     if (userCase) {
-      return res.status(400).json({ error: "User already enrolled in this case" });
+      return res
+        .status(400)
+        .json({ error: "User already enrolled in this case" });
     }
 
     // Benutzer dem Fall hinzufügen
@@ -181,7 +183,9 @@ exports.removeUserFromCase = async (req, res) => {
       },
     });
     if (!userToRemove) {
-      return res.status(400).json({ error: "User is not enrolled in this case" });
+      return res
+        .status(400)
+        .json({ error: "User is not enrolled in this case" });
     }
 
     // Benutzer aus dem Fall entfernen
@@ -234,7 +238,6 @@ exports.deleteCase = async (req, res) => {
   }
 };
 
-// Zählt die eingetragenen Benutzer für einen Fall
 exports.getEnrolledUsersCount = async (req, res) => {
   try {
     const { caseId } = req.params;
@@ -243,7 +246,7 @@ exports.getEnrolledUsersCount = async (req, res) => {
     const existingCase = await prisma.case.findUnique({
       where: { id: parseInt(caseId) },
     });
-    
+
     if (!existingCase) {
       return res.status(404).json({ error: "Case not found" });
     }
@@ -275,7 +278,9 @@ exports.getCasesWithMostEnrolledUsers = async (req, res) => {
     res.json(cases.slice(0, 4)); // Nimm die Top 4 Fälle mit den meisten eingetragenen Benutzern
   } catch (error) {
     console.error("Error fetching cases with most enrolled users:", error);
-    res.status(500).json({ error: "Failed to fetch cases with most enrolled users" });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch cases with most enrolled users" });
   }
 };
 
@@ -284,8 +289,8 @@ exports.sendMessageToCase = async (req, res) => {
   const { text } = req.body;
 
   // Überprüfung der Eingabewerte
-  if (!text || typeof text !== 'string') {
-    return res.status(400).json({ error: 'Invalid message text' });
+  if (!text || typeof text !== "string") {
+    return res.status(400).json({ error: "Invalid message text" });
   }
 
   try {
@@ -297,7 +302,7 @@ exports.sendMessageToCase = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: "User not found" });
     }
 
     // Erstellen der neuen Nachricht
@@ -311,11 +316,10 @@ exports.sendMessageToCase = async (req, res) => {
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ error: 'Failed to send message' });
+    console.error("Error sending message:", error);
+    res.status(500).json({ error: "Failed to send message" });
   }
 };
-
 
 exports.getAllMessagesForCase = async (req, res) => {
   const { caseId } = req.params;
@@ -336,7 +340,7 @@ exports.getAllMessagesForCase = async (req, res) => {
     });
 
     // Modify each message object to include the username of the sender
-    const modifiedMessages = messages.map(async message => {
+    const modifiedMessages = messages.map(async (message) => {
       const { userId, ...rest } = message;
       const user = await prisma.user.findUnique({
         where: {
@@ -358,10 +362,9 @@ exports.getAllMessagesForCase = async (req, res) => {
 
     res.status(200).json(resolvedModifiedMessages);
   } catch (error) {
-    console.error('Error fetching messages for case:', error);
-    res.status(500).json({ error: 'Failed to fetch messages for case' });
+    console.error("Error fetching messages for case:", error);
+    res.status(500).json({ error: "Failed to fetch messages for case" });
   }
 };
-
 
 module.exports = exports;
