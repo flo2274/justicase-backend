@@ -45,13 +45,12 @@ const cases = [
 ];
 
 async function main() {
-  // Create users
   await Promise.all(
     users.map(async (userData) => {
       const existingUser = await prisma.user.findUnique({ where: { username: userData.username } });
       if (existingUser) {
         console.log(`User with username ${userData.username} already exists, skipping creation.`);
-        return; // Skip creating this user
+        return;
       }
       const hashedPassword = await bcrypt.hash(userData.password, 10);
       await prisma.user.create({
@@ -63,7 +62,6 @@ async function main() {
     })
   );
 
-  // Create cases
   await Promise.all(
     cases.map(async (caseData) => {
       await prisma.case.create({
@@ -72,7 +70,6 @@ async function main() {
     })
   );
 
-  // Assign users to cases
   const allUsers = await prisma.user.findMany();
   const allCases = await prisma.case.findMany();
 
