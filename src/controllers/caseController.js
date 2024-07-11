@@ -198,18 +198,15 @@ exports.removeUserFromCase = async (req, res) => {
   }
 };
 
-// Löscht einen Fall
 exports.deleteCase = async (req, res) => {
   const caseId = parseInt(req.params.caseId);
   const requesterRole = req.user.role;
 
   try {
-    // Überprüfen, ob der Benutzer ein Administrator ist
     if (requesterRole !== "admin") {
       return res.status(403).json({ error: "Unauthorized to delete case" });
     }
 
-    // Überprüfen, ob der Fall existiert
     const existingCase = await prisma.case.findUnique({
       where: { id: caseId },
     });
@@ -217,29 +214,31 @@ exports.deleteCase = async (req, res) => {
       return res.status(404).json({ error: "Case not found" });
     }
 
-    // Löschen aller zugehörigen Einträge in der UserCase-Tabelle
     await prisma.userCase.deleteMany({
       where: { caseId: caseId },
     });
 
-    // Fall löschen
+    await prisma.message.deleteMany({
+      where: { caseId: caseId },
+    });
+
     await prisma.case.delete({
       where: { id: caseId },
     });
 
-    res.status(200).json({ message: "Case deleted successfully" });
+    res.status(200).json({ message: "Case and related entries deleted successfully" });
   } catch (error) {
     console.error("Error deleting case:", error);
-    res.status(500).json({ error: "Failed to delete case" });
+    res.status(500).json({ error: "Failed to delete case and related entries" });
   }
 };
 
-// Zählt die eingetragenen Benutzer für einen Fall
+
+
 exports.getEnrolledUsersCount = async (req, res) => {
   try {
     const { caseId } = req.params;
 
-    // Überprüfen, ob der Fall existiert
     const existingCase = await prisma.case.findUnique({
       where: { id: parseInt(caseId) },
     });
@@ -248,7 +247,6 @@ exports.getEnrolledUsersCount = async (req, res) => {
       return res.status(404).json({ error: "Case not found" });
     }
 
-    // Zähle die eingetragenen Benutzer für den Fall
     const count = await prisma.userCase.count({
       where: { caseId: parseInt(caseId) },
     });
@@ -260,7 +258,6 @@ exports.getEnrolledUsersCount = async (req, res) => {
   }
 };
 
-// Holt Fälle mit den meisten eingeschriebenen Benutzern
 exports.getCasesWithMostEnrolledUsers = async (req, res) => {
   try {
     const cases = await prisma.case.findMany({
@@ -269,10 +266,9 @@ exports.getCasesWithMostEnrolledUsers = async (req, res) => {
       },
     });
 
-    // Sortiere die Fälle nach der Anzahl der eingetragenen Benutzer in absteigender Reihenfolge
     cases.sort((a, b) => b.users.length - a.users.length);
 
-    res.json(cases.slice(0, 4)); // Nimm die Top 4 Fälle mit den meisten eingetragenen Benutzern
+    res.json(cases.slice(0, 4));
   } catch (error) {
     console.error("Error fetching cases with most enrolled users:", error);
     res.status(500).json({ error: "Failed to fetch cases with most enrolled users" });
@@ -283,7 +279,6 @@ exports.sendMessageToCase = async (req, res) => {
   const { caseId } = req.params;
   const { text } = req.body;
 
-  // Überprüfung der Eingabewerte
   if (!text || typeof text !== 'string') {
     return res.status(400).json({ error: 'Invalid message text' });
   }
@@ -291,7 +286,6 @@ exports.sendMessageToCase = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // Überprüfen, ob der Benutzer existiert
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
@@ -300,7 +294,6 @@ exports.sendMessageToCase = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // Erstellen der neuen Nachricht
     const newMessage = await prisma.message.create({
       data: {
         text,
@@ -321,10 +314,8 @@ exports.getAllMessagesForCase = async (req, res) => {
   const { caseId } = req.params;
 
   try {
-    // Convert caseId to integer
     const parsedCaseId = parseInt(caseId);
 
-    // Fetch messages for the given caseId including related user data
     const messages = await prisma.message.findMany({
       where: {
         caseId: parsedCaseId,
@@ -335,7 +326,6 @@ exports.getAllMessagesForCase = async (req, res) => {
       },
     });
 
-    // Modify each message object to include the username of the sender
     const modifiedMessages = messages.map(async message => {
       const { userId, ...rest } = message;
       const user = await prisma.user.findUnique({
@@ -353,7 +343,6 @@ exports.getAllMessagesForCase = async (req, res) => {
       };
     });
 
-    // Resolve all promises in modifiedMessages array
     const resolvedModifiedMessages = await Promise.all(modifiedMessages);
 
     res.status(200).json(resolvedModifiedMessages);
