@@ -1,23 +1,47 @@
-# justicase-backend
+# JustiCase Backend
 
-git clone 
-npm install
-create .env file
+Dies ist das Backend für die JustiCase-Anwendung, entwickelt mit Node.js, Express, Prisma und MySQL.
 
-node src/prisma/seed.js
+## Projektstruktur
 
-//Start server with npm run dev
+- `app.js`: Hauptkonfigurationsdatei für Express.
+- `server.js`: Startet den Server.
+- `src/controllers`: Enthält Controller für Authentifizierung, Benutzer und Fälle.
+- `src/middleware`: Enthält Middleware für Fehlerbehandlung und Prisma.
+- `src/routes`: Definiert die Routen für Authentifizierung, Benutzer und Fälle.
+- `src/services`: Enthält Dienstdateien, z.B. für Authentifizierung.
+- `src/utils`: Nützliche Hilfsfunktionen.
+- `schema.prisma`: Prisma-Schema für die Datenbank.
 
-//.env needs to be added maunally
+## Installation
 
-/ Update des Datenbankschemas durch Migration.
-// npx prisma migrate dev
+1. Repository klonen:
+    ```bash
+    git clone <repository-url>
+    ```
 
-make validator
+2. Abhängigkeiten installieren:
+    ```bash
+    npm install
+    ```
 
-flutter:
-fetch more often bsp after case creation
+3. `.env` Datei erstellen und die erforderlichen Umgebungsvariablen einfügen. Siehe `.env.template` für das Format.
+
+4. Datenbank-Seed ausführen:
+    ```bash
+    node src/prisma/seed.js
+    ```
+
+5. Datenbankschema migrieren:
+    ```bash
+    npx prisma migrate dev
+    ```
+
+## Start des Servers
+
+Server im Entwicklungsmodus starten:
+```bash
+npm run dev
 
 
-eve@example.com
-password123
+
