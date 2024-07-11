@@ -26,6 +26,12 @@ Dies ist das Backend für die JustiCase-Anwendung, entwickelt mit Node.js, Expre
     ```
 
 3. `.env` Datei erstellen und die erforderlichen Umgebungsvariablen einfügen. Siehe `.env.template` für das Format.
+    ###Beispiel .env Datei
+    Erstellen Sie eine .env Datei im Stammverzeichnis und fügen Sie die folgenden Umgebungsvariablen hinzu:
+    ```bash
+    DATABASE_URL=mysql://USER:PASSWORD@HOST:PORT/DATABASE
+    JWT_SECRET=IhrGeheimesJWTSecret
+    ```
 
 4. Datenbank-Seed ausführen:
     ```bash
