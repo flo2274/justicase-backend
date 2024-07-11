@@ -42,6 +42,8 @@ Dies ist das Backend für die JustiCase-Anwendung, entwickelt mit Node.js, Expre
 Server im Entwicklungsmodus starten:
 ```bash
 npm run dev
+```
+Der Server wird unter http://localhost:3000 laufen.
 
 
 
