@@ -1,34 +1,32 @@
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const authService = require("../services/authService");
-
 
 exports.register = async (req, res) => {
   const { firstName, lastName, username, email, password } = req.body;
 
   if (!firstName || !lastName || !username || !email || !password) {
-    return res.status(400).json({ error: "All fields are required" });
+    return res.status(400).json({ error: "Alle Felder sind erforderlich" });
   }
 
   if (!/\S+@\S+\.\S+/.test(email)) {
-    return res.status(400).json({ error: "Invalid email format" });
+    return res.status(400).json({ error: "Ungültiges E-Mail-Format" });
   }
 
   if (password.length < 6) {
-    return res.status(400).json({ error: "Password must be at least 6 characters long" });
+    return res.status(400).json({ error: "Das Passwort muss mindestens 6 Zeichen lang sein" });
   }
 
   try {
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: "Email is already registered" });
+      return res.status(400).json({ error: "E-Mail ist bereits registriert" });
     }
 
     const existingUsername = await prisma.user.findUnique({ where: { username } });
     if (existingUsername) {
-      return res.status(400).json({ error: "Username already in use" });
+      return res.status(400).json({ error: "Benutzername ist bereits vergeben" });
     }
 
     let role = "user";
@@ -48,10 +46,10 @@ exports.register = async (req, res) => {
       },
     });
 
-    res.status(201).json({ message: "Registration successful" });
+    res.status(201).json({ message: "Registrierung erfolgreich" });
   } catch (error) {
-    console.error("Error registering user:", error);
-    res.status(500).json({ error: "Failed to register user" });
+    console.error("Fehler bei der Registrierung:", error);
+    res.status(500).json({ error: "Registrierung fehlgeschlagen" });
   }
 };
 
@@ -62,12 +60,12 @@ exports.login = async (req, res) => {
     const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid email" });
+      return res.status(401).json({ error: "Ungültige E-Mail" });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Ungültige E-Mail oder Passwort" });
     }
 
     const token = authService.generateToken(user);

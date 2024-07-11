@@ -42,7 +42,6 @@ exports.deleteUser = async (req, res) => {
 
     res.status(200).json({ message: "Benutzer und zugehörige Einträge erfolgreich gelöscht" });
   } catch (error) {
-    console.error("Fehler beim Löschen des Benutzers:", error);
     res.status(500).json({ error: "Fehler beim Löschen des Benutzers und zugehöriger Einträge" });
   }
 };

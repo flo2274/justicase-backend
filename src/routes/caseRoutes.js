@@ -26,8 +26,6 @@ router.delete("/:caseId/user", authenticateJWT, asyncHandler(removeUserFromCase)
 router.delete("/:caseId", authenticateJWT, asyncHandler(deleteCase));
 router.get("/:caseId/count/users", authenticateJWT, asyncHandler(getEnrolledUsersCount));
 router.get("/most-enrolled", authenticateJWT, asyncHandler(getCasesWithMostEnrolledUsers));
-
-//ForumCase routes
 router.post("/:caseId/messages", authenticateJWT, asyncHandler(sendMessageToCase));
 router.get("/:caseId/messages", authenticateJWT, asyncHandler(getAllMessagesForCase));
 

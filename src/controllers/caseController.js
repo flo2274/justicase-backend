@@ -1,7 +1,6 @@
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-// Erstellt einen neuen Fall
 exports.createCase = async (req, res) => {
   const { name, companyType, industry } = req.body;
   const userId = req.user.userId;
@@ -28,28 +27,25 @@ exports.createCase = async (req, res) => {
 
     res.status(201).json(result);
   } catch (error) {
-    console.error("Error creating case:", error);
-    res.status(500).json({ error: "Failed to create case" });
+    console.error("Fehler beim Erstellen des Falls:", error);
+    res.status(500).json({ error: "Fehler beim Erstellen des Falls" });
   }
 };
 
-// Holt alle Fälle
 exports.getAllCases = async (req, res) => {
   try {
     const cases = await prisma.case.findMany({});
     res.json(cases);
   } catch (error) {
-    console.error("Error fetching cases:", error);
-    res.status(500).json({ error: "Failed to fetch cases" });
+    console.error("Fehler beim Abrufen der Fälle:", error);
+    res.status(500).json({ error: "Fehler beim Abrufen der Fälle" });
   }
 };
 
-// Holt Fälle für einen bestimmten Benutzer
 exports.getCasesByUser = async (req, res) => {
   try {
     const { role, userId } = req.user;
 
-    // Wenn der Benutzer ein Administrator ist, kann nach einer spezifischen userId gefiltert werden
     if (role === "admin") {
       const { userId: requestedUserId } = req.query;
       const targetUserId = requestedUserId ? parseInt(requestedUserId) : userId;
@@ -62,7 +58,6 @@ exports.getCasesByUser = async (req, res) => {
       const cases = userCases.map((userCase) => userCase.case);
       res.json(cases);
     } else {
-      // Normaler Benutzer kann nur seine eigenen Fälle sehen
       const userCases = await prisma.userCase.findMany({
         where: { userId: userId },
         include: { case: true },
@@ -72,12 +67,11 @@ exports.getCasesByUser = async (req, res) => {
       res.json(cases);
     }
   } catch (error) {
-    console.error("Error fetching user's cases:", error);
-    res.status(500).json({ error: "Failed to fetch cases" });
+    console.error("Fehler beim Abrufen der Fälle des Benutzers:", error);
+    res.status(500).json({ error: "Fehler beim Abrufen der Fälle" });
   }
 };
 
-// Holt Fälle nach Branche
 exports.getCasesByIndustry = async (req, res) => {
   const { industry } = req.query;
 
@@ -88,12 +82,11 @@ exports.getCasesByIndustry = async (req, res) => {
 
     res.json(cases);
   } catch (error) {
-    console.error("Error fetching cases by industry:", error);
-    res.status(500).json({ error: "Failed to fetch cases" });
+    console.error("Fehler beim Abrufen der Fälle nach Branche:", error);
+    res.status(500).json({ error: "Fehler beim Abrufen der Fälle" });
   }
 };
 
-// Fügt einen Benutzer zu einem Fall hinzu
 exports.addUserToCase = async (req, res) => {
   const { caseId } = req.params;
   let { userId } = req.body;
@@ -101,27 +94,23 @@ exports.addUserToCase = async (req, res) => {
   const requesterRole = req.user.role;
 
   try {
-    // Überprüfen, ob der Fall existiert
     const existingCase = await prisma.case.findUnique({
       where: { id: parseInt(caseId) },
     });
     if (!existingCase) {
-      return res.status(404).json({ error: "Case not found" });
+      return res.status(404).json({ error: "Fall nicht gefunden" });
     }
 
-    // Admin-Logik: Überprüfen, ob userId im Request-Body vorhanden ist
     if (requesterRole === "admin") {
       if (!userId) {
-        return res.status(400).json({ error: "userId is required for admin" });
+        return res.status(400).json({ error: "userId ist für Admin erforderlich" });
       }
     } else {
-      // Falls kein userId im Request-Body ist, nutze requesterUserId
       if (!userId) {
         userId = requesterUserId;
       }
     }
 
-    // Überprüfen, ob der Benutzer bereits dem Fall zugeordnet ist
     const userCase = await prisma.userCase.findFirst({
       where: {
         userId: userId,
@@ -129,10 +118,9 @@ exports.addUserToCase = async (req, res) => {
       },
     });
     if (userCase) {
-      return res.status(400).json({ error: "User already enrolled in this case" });
+      return res.status(400).json({ error: "Benutzer ist bereits in diesem Fall eingeschrieben" });
     }
 
-    // Benutzer dem Fall hinzufügen
     await prisma.userCase.create({
       data: {
         userId: userId,
@@ -140,61 +128,55 @@ exports.addUserToCase = async (req, res) => {
       },
     });
 
-    res.status(201).json({ message: "User added to case" });
+    res.status(201).json({ message: "Benutzer zum Fall hinzugefügt" });
   } catch (error) {
-    console.error("Error adding user to case:", error);
-    res.status(500).json({ error: "Failed to add user to case" });
+    console.error("Fehler beim Hinzufügen des Benutzers zum Fall:", error);
+    res.status(500).json({ error: "Fehler beim Hinzufügen des Benutzers zum Fall" });
   }
 };
 
-// Entfernt einen Benutzer aus einem Fall
 exports.removeUserFromCase = async (req, res) => {
   const { caseId } = req.params;
-  let { userId } = req.query; // userId als Query-Parameter
+  let { userId } = req.query;
   const requesterUserId = req.user.userId;
   const requesterRole = req.user.role;
 
   try {
-    // Überprüfen, ob der Fall existiert
     const existingCase = await prisma.case.findUnique({
       where: { id: parseInt(caseId) },
     });
     if (!existingCase) {
-      return res.status(404).json({ error: "Case not found" });
+      return res.status(404).json({ error: "Fall nicht gefunden" });
     }
 
     if (requesterRole === "admin") {
-      // Admin-Logik: userId im Query-Parameter erforderlich
       if (!userId) {
-        return res.status(400).json({ error: "userId is required for admin" });
+        return res.status(400).json({ error: "userId ist für Admin erforderlich" });
       }
     } else {
-      // Nicht-Admin-Logik: Verwenden von requesterUserId als userId
       userId = requesterUserId.toString();
     }
 
-    // Überprüfen, ob der Benutzer im Fall eingeschrieben ist
     const userToRemove = await prisma.userCase.findFirst({
       where: {
-        userId: parseInt(userId), // Konvertiere userId zu einer Zahl
+        userId: parseInt(userId),
         caseId: parseInt(caseId),
       },
     });
     if (!userToRemove) {
-      return res.status(400).json({ error: "User is not enrolled in this case" });
+      return res.status(400).json({ error: "Benutzer ist nicht in diesem Fall eingeschrieben" });
     }
 
-    // Benutzer aus dem Fall entfernen
     await prisma.userCase.delete({
       where: {
         id: userToRemove.id,
       },
     });
 
-    res.status(200).json({ message: "User removed from case successfully" });
+    res.status(200).json({ message: "Benutzer erfolgreich aus dem Fall entfernt" });
   } catch (error) {
-    console.error("Error removing user from case:", error);
-    res.status(500).json({ error: "Failed to remove user from case" });
+    console.error("Fehler beim Entfernen des Benutzers aus dem Fall:", error);
+    res.status(500).json({ error: "Fehler beim Entfernen des Benutzers aus dem Fall" });
   }
 };
 
@@ -204,14 +186,14 @@ exports.deleteCase = async (req, res) => {
 
   try {
     if (requesterRole !== "admin") {
-      return res.status(403).json({ error: "Unauthorized to delete case" });
+      return res.status(403).json({ error: "Unberechtigt, den Fall zu löschen" });
     }
 
     const existingCase = await prisma.case.findUnique({
       where: { id: caseId },
     });
     if (!existingCase) {
-      return res.status(404).json({ error: "Case not found" });
+      return res.status(404).json({ error: "Fall nicht gefunden" });
     }
 
     await prisma.userCase.deleteMany({
@@ -226,14 +208,12 @@ exports.deleteCase = async (req, res) => {
       where: { id: caseId },
     });
 
-    res.status(200).json({ message: "Case and related entries deleted successfully" });
+    res.status(200).json({ message: "Fall und zugehörige Einträge erfolgreich gelöscht" });
   } catch (error) {
-    console.error("Error deleting case:", error);
-    res.status(500).json({ error: "Failed to delete case and related entries" });
+    console.error("Fehler beim Löschen des Falls:", error);
+    res.status(500).json({ error: "Fehler beim Löschen des Falls und der zugehörigen Einträge" });
   }
 };
-
-
 
 exports.getEnrolledUsersCount = async (req, res) => {
   try {
@@ -244,7 +224,7 @@ exports.getEnrolledUsersCount = async (req, res) => {
     });
     
     if (!existingCase) {
-      return res.status(404).json({ error: "Case not found" });
+      return res.status(404).json({ error: "Fall nicht gefunden" });
     }
 
     const count = await prisma.userCase.count({
@@ -253,8 +233,8 @@ exports.getEnrolledUsersCount = async (req, res) => {
 
     res.json({ count });
   } catch (error) {
-    console.error("Error fetching enrolled users count:", error);
-    res.status(500).json({ error: "Failed to fetch enrolled users count" });
+    console.error("Fehler beim Abrufen der Anzahl der eingeschriebenen Benutzer:", error);
+    res.status(500).json({ error: "Fehler beim Abrufen der Anzahl der eingeschriebenen Benutzer" });
   }
 };
 
@@ -270,8 +250,8 @@ exports.getCasesWithMostEnrolledUsers = async (req, res) => {
 
     res.json(cases.slice(0, 4));
   } catch (error) {
-    console.error("Error fetching cases with most enrolled users:", error);
-    res.status(500).json({ error: "Failed to fetch cases with most enrolled users" });
+    console.error("Fehler beim Abrufen der Fälle mit den meisten eingeschriebenen Benutzern:", error);
+    res.status(500).json({ error: "Fehler beim Abrufen der Fälle mit den meisten eingeschriebenen Benutzern" });
   }
 };
 
@@ -280,7 +260,7 @@ exports.sendMessageToCase = async (req, res) => {
   const { text } = req.body;
 
   if (!text || typeof text !== 'string') {
-    return res.status(400).json({ error: 'Invalid message text' });
+    return res.status(400).json({ error: 'Ungültiger Nachrichtentext' });
   }
 
   try {
@@ -291,7 +271,7 @@ exports.sendMessageToCase = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ error: 'Benutzer nicht gefunden' });
     }
 
     const newMessage = await prisma.message.create({
@@ -304,11 +284,10 @@ exports.sendMessageToCase = async (req, res) => {
 
     res.status(201).json(newMessage);
   } catch (error) {
-    console.error('Error sending message:', error);
-    res.status(500).json({ error: 'Failed to send message' });
+    console.error('Fehler beim Senden der Nachricht:', error);
+    res.status(500).json({ error: 'Nachricht konnte nicht gesendet werden' });
   }
 };
-
 
 exports.getAllMessagesForCase = async (req, res) => {
   const { caseId } = req.params;
@@ -347,10 +326,9 @@ exports.getAllMessagesForCase = async (req, res) => {
 
     res.status(200).json(resolvedModifiedMessages);
   } catch (error) {
-    console.error('Error fetching messages for case:', error);
-    res.status(500).json({ error: 'Failed to fetch messages for case' });
+    console.error('Fehler beim Abrufen der Nachrichten für den Fall:', error);
+    res.status(500).json({ error: 'Nachrichten für den Fall konnten nicht abgerufen werden' });
   }
 };
-
 
 module.exports = exports;

@@ -7,6 +7,6 @@ const router = express.Router();
 
 router.get("/", authenticateJWT, asyncHandler(getAllUsers));
 router.delete("/:userId", authenticateJWT, asyncHandler(deleteUser));
-router.get("/case/:caseId", authenticateJWT, asyncHandler(getUsersByCase)); // Hier war der Fehler
+router.get("/case/:caseId", authenticateJWT, asyncHandler(getUsersByCase));
 
 module.exports = router;
