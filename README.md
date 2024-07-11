@@ -55,5 +55,3 @@ Mit den folgenden Beispiel Daten kann sich eingeloggt werden, nachdem der Seed a
 - Email: eve@example.com
 
 - Passwort: password123
-
-Der Nutzer der Sich mit dem username admin registriert erhält Admin Rechte.
